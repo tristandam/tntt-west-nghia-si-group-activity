@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fold } from "@/lib/names";
 import { ACTIVITY_TITLE, Card, Face, Shell, Stars, usePoll } from "./ui";
 
@@ -24,6 +24,7 @@ type State = {
   round: {
     number: number;
     open: boolean;
+    endsAt: string;
     secondsLeft: number;
     group: { number: number; members: Member[] } | null;
   } | null;
@@ -58,7 +59,20 @@ export function PlayerApp() {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState("");
   const [phrase, setPhrase] = useState("");
+  const [photoName, setPhotoName] = useState("");
   const [notice, setNotice] = useState("");
+  const [now, setNow] = useState(() => Date.now());
+  const roundEndsAt = data.round?.open ? data.round.endsAt : null;
+
+  useEffect(() => {
+    if (!roundEndsAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, [roundEndsAt]);
+
+  const secondsLeft = roundEndsAt
+    ? Math.max(0, Math.ceil((Date.parse(roundEndsAt) - now) / 1000))
+    : 0;
 
   const names = useMemo(() => {
     const needle = fold(query.trim());
@@ -179,14 +193,20 @@ export function PlayerApp() {
             </Card>
           ) : null}
 
+          {data.stage === "active" && data.round?.open ? (
+            <div
+              className={`rounded-3xl px-4 py-5 text-center ${secondsLeft <= 10 ? "bg-[#ffb4a8] text-[#1a140c]" : "bg-[#f0c56e] text-[#1a140c]"}`}
+            >
+              <p className="text-sm font-semibold uppercase tracking-[0.2em]">Time left</p>
+              <p className="text-7xl font-bold leading-none tabular-nums">{secondsLeft}</p>
+            </div>
+          ) : null}
+
           {data.stage === "active" && data.round?.open && data.round.group ? (
             <Card>
-              <div className="flex items-center justify-between">
-                <p className="text-lg font-semibold">
-                  Round {data.round.number} · Group {data.round.group.number}
-                </p>
-                <p className="text-2xl font-semibold text-[#f0c56e]">{data.round.secondsLeft}s</p>
-              </div>
+              <p className="text-lg font-semibold">
+                Round {data.round.number} · Group {data.round.group.number}
+              </p>
               <p className="mt-1 text-[#cbbba4]">Find these people and agree on one thing you all have in common.</p>
               <div className="mt-3 grid gap-2">
                 {data.round.group.members.map((member) => (
@@ -208,6 +228,7 @@ export function PlayerApp() {
                       const body = (await response.json()) as { error?: string };
                       if (!response.ok) throw new Error(body.error || "Upload failed.");
                       setPhrase("");
+                      setPhotoName("");
                     });
                   }}
                 >
@@ -220,7 +241,18 @@ export function PlayerApp() {
                     placeholder="One thing you all have in common"
                     className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3"
                   />
-                  <input name="photo" type="file" accept="image/*" capture="environment" required className="text-sm" />
+                  <label className="block cursor-pointer rounded-2xl border border-dashed border-[#f0c56e] bg-black/30 px-4 py-4 text-center font-semibold text-[#f0c56e]">
+                    {photoName ? `Photo ready · ${photoName}` : "Take the group photo"}
+                    <input
+                      name="photo"
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      required
+                      className="sr-only"
+                      onChange={(event) => setPhotoName(event.target.files?.[0]?.name ?? "")}
+                    />
+                  </label>
                   <button disabled={busy === "submit"} className="rounded-2xl bg-[#d7b6ff] px-4 py-3 font-semibold text-[#1a140c]">
                     Submit for the group
                   </button>
