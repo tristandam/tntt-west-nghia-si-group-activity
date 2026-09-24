@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Card, Face, Shell, Stars, photoUrl, usePoll } from "./ui";
 
 type Score = { rank: number; points: number; id: string; name: string; avatarPath: string | null };
@@ -24,9 +25,9 @@ export function BoardApp() {
     <Shell
       title={data.stage === "ended" ? "Final scores" : "Live board"}
       action={
-        <a className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/">
+        <Link className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/">
           My phone
-        </a>
+        </Link>
       }
     >
       {error ? <p className="mb-3 text-sm font-medium text-[#8a3b2b]">{error}</p> : null}

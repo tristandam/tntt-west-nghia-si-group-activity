@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { fold } from "@/lib/names";
 import { ACTIVITY_TITLE, Card, Face, Shell, Stars, usePoll } from "./ui";
@@ -84,9 +85,9 @@ export function PlayerApp() {
     <Shell
       title={ACTIVITY_TITLE}
       action={
-        <a className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/board">
+        <Link className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/board">
           Leaderboard
-        </a>
+        </Link>
       }
     >
       {error || notice ? <p className="mb-3 text-sm font-medium text-[#8a3b2b]">{notice || error}</p> : null}
@@ -165,7 +166,7 @@ export function PlayerApp() {
 
           {data.stage === "prep" ? (
             <Card>
-              <p className="text-lg font-semibold">You're in</p>
+              <p className="text-lg font-semibold">You are in</p>
               <p className="mt-1 text-[#cbbba4]">Keep this page open. A leader will start the round, and your group will show up here.</p>
             </Card>
           ) : null}

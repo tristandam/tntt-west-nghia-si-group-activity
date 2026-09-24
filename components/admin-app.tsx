@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import type { Rating, Stage } from "@/lib/types";
 import { Card, Face, RatingButtons, Shell, photoUrl, usePoll } from "./ui";
@@ -89,9 +90,9 @@ export function AdminApp() {
             <p className="mt-3 text-sm text-[#cbbba4]">Default password is admin.</p>
           ) : null}
           {notice ? <p className="mt-3 text-[#ffb4a8]">{notice}</p> : null}
-          <a className="mt-4 inline-block text-sm" href="/rate">
+          <Link className="mt-4 inline-block text-sm" href="/rate">
             Rating desk
-          </a>
+          </Link>
         </Card>
       </Shell>
     );
@@ -102,9 +103,9 @@ export function AdminApp() {
       <Shell title="Admin">
         <Card>
           <p>This password is for the rating desk.</p>
-          <a className="mt-3 inline-block rounded-2xl bg-[#d7b6ff] px-4 py-3 font-semibold text-[#1a140c]" href="/rate">
+          <Link className="mt-3 inline-block rounded-2xl bg-[#d7b6ff] px-4 py-3 font-semibold text-[#1a140c]" href="/rate">
             Open rating desk
-          </a>
+          </Link>
         </Card>
       </Shell>
     );
@@ -118,8 +119,8 @@ export function AdminApp() {
       title="Admin"
       action={
         <div className="flex gap-3 text-sm">
-          <a href="/board">Board</a>
-          <a href="/rate">Rate</a>
+          <Link href="/board">Board</Link>
+          <Link href="/rate">Rate</Link>
           <button className="text-[#cbbba4]" onClick={() => void send({ action: "logout" })}>
             Sign out
           </button>
