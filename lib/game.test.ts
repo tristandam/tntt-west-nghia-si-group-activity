@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assignGroups, pointsForPlace, rateSubmission, rejectSubmission, startRound } from "./game";
+import { applyAiRating, assignGroups, pointsForPlace, rejectSubmission, startRound } from "./game";
+import { parseRating } from "./ai";
 import { displayName } from "./names";
 import { emptyGame, type Player } from "./types";
 
@@ -71,6 +72,7 @@ test("reject zeros a submission and a new one is scored by its own time", () => 
       submittedAt: new Date(2_000).toISOString(),
       rejected: false,
       rating: null,
+      comment: null,
       pointsEach: 10,
     },
     {
@@ -83,6 +85,7 @@ test("reject zeros a submission and a new one is scored by its own time", () => 
       submittedAt: new Date(3_000).toISOString(),
       rejected: false,
       rating: null,
+      comment: null,
       pointsEach: 8,
     },
   );
@@ -99,13 +102,23 @@ test("reject zeros a submission and a new one is scored by its own time", () => 
     submittedAt: new Date(4_000).toISOString(),
     rejected: false,
     rating: null,
+    comment: null,
     pointsEach: 1,
   });
   rejectSubmission(data, "s2");
-  rateSubmission(data, "s3", 4);
+  applyAiRating(data, "s3", 4, "A specific family detail is a real find.");
   assert.equal(data.submissions[1].pointsEach, 0);
   assert.equal(data.submissions[2].pointsEach, 10);
   assert.equal(data.submissions[2].rating, 4);
+  assert.equal(data.submissions[2].comment, "A specific family detail is a real find.");
+  applyAiRating(data, "s3", 1, "should not replace the first rating");
+  assert.equal(data.submissions[2].rating, 4);
+});
+
+test("a model reply becomes a label and a comment", () => {
+  const parsed = parseRating('{"rating":2,"comment":"Pink is a real link, but it is pretty broad."}');
+  assert.deepEqual(parsed, { rating: 2, comment: "Pink is a real link, but it is pretty broad." });
+  assert.equal(parseRating("no json"), null);
 });
 
 test("blank duplicate names stay distinct", () => {

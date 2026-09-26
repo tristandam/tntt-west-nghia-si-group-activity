@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Rating, Stage } from "@/lib/types";
-import { Card, Face, RatingButtons, Shell, photoUrl, usePoll } from "./ui";
+import { Card, Face, Shell, Stars, photoUrl, usePoll } from "./ui";
 
 type RosterPerson = {
   id: string;
@@ -22,11 +22,14 @@ type Submission = {
   photoPath: string;
   rejected: boolean;
   rating: Rating | null;
+  label: string | null;
+  comment: string | null;
   pointsEach: number;
   members: { id: string; name: string; avatarPath: string | null }[];
 };
 type State = {
   role: "admin" | "rater" | null;
+  aiReady?: boolean;
   settings?: {
     stage: Stage;
     roundLengthSec: number;
@@ -90,9 +93,6 @@ export function AdminApp() {
             <p className="mt-3 text-sm text-[#cbbba4]">Default password is admin.</p>
           ) : null}
           {notice ? <p className="mt-3 text-[#ffb4a8]">{notice}</p> : null}
-          <Link className="mt-4 inline-block text-sm" href="/rate">
-            Rating desk
-          </Link>
         </Card>
       </Shell>
     );
@@ -102,10 +102,7 @@ export function AdminApp() {
     return (
       <Shell title="Admin">
         <Card>
-          <p>This password is for the rating desk.</p>
-          <Link className="mt-3 inline-block rounded-2xl bg-[#d7b6ff] px-4 py-3 font-semibold text-[#1a140c]" href="/rate">
-            Open rating desk
-          </Link>
+          <p>Answers are rated automatically. This password does not open a grading desk.</p>
         </Card>
       </Shell>
     );
@@ -120,13 +117,15 @@ export function AdminApp() {
       action={
         <div className="flex gap-3 text-sm">
           <Link href="/board">Board</Link>
-          <Link href="/rate">Rate</Link>
           <button className="text-[#cbbba4]" onClick={() => void send({ action: "logout" })}>
             Sign out
           </button>
         </div>
       }
     >
+      {data.aiReady === false ? (
+        <p className="mb-3 font-medium text-[#8a3b2b]">Add GEMINI_API_KEY before the event so answers get rated.</p>
+      ) : null}
       {error || notice ? <p className="mb-3 font-medium text-[#8a3b2b]">{notice || error}</p> : null}
       <div className="grid gap-4">
         <Card>
@@ -245,14 +244,10 @@ export function AdminApp() {
                       <p>
                         “{submission.phrase}” · {submission.rejected ? "0" : submission.pointsEach} pts
                       </p>
-                      <div className="mt-2">
-                        <RatingButtons
-                          current={submission.rating}
-                          onPick={(rating) =>
-                            void send({ action: "rate", submissionId: submission.id, rating }).catch((err) => setNotice(err.message))
-                          }
-                        />
-                      </div>
+                      <p className="mt-1">
+                        <Stars rating={submission.rating} /> {submission.label ?? "Rating in a moment"}
+                      </p>
+                      {submission.comment ? <p className="mt-1 text-sm text-[#cbbba4]">{submission.comment}</p> : null}
                       <button
                         className="mt-2 text-sm text-[#ffb4a8]"
                         disabled={submission.rejected}

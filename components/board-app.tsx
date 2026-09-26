@@ -13,6 +13,7 @@ type Selfie = {
   rejected: boolean;
   rating: 1 | 2 | 3 | 4 | null;
   label: string | null;
+  comment: string | null;
   pointsEach: number;
   place: number | null;
   members: { id: string; name: string }[];
@@ -60,8 +61,9 @@ export function BoardApp() {
               </p>
               <p className="text-xl font-semibold">“{selfie.phrase}”</p>
               <p>
-                <Stars rating={selfie.rating} /> {selfie.label ?? "Not rated yet"}
+                <Stars rating={selfie.rating} /> {selfie.label ?? "Rating in a moment"}
               </p>
+              {selfie.comment ? <p className="mt-1 text-[#cbbba4]">{selfie.comment}</p> : null}
               <p className="mt-1 text-sm text-[#cbbba4]">{selfie.members.map((member) => member.name).join(", ")}</p>
             </Card>
           ))}

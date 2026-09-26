@@ -169,6 +169,7 @@ export function addSubmission(
     submittedAt: new Date(input.now).toISOString(),
     rejected: false,
     rating: null,
+    comment: null,
     pointsEach: 1,
   };
   data.submissions.push(submission);
@@ -185,11 +186,12 @@ export function rejectSubmission(data: GameData, submissionId: string) {
   return submission;
 }
 
-export function rateSubmission(data: GameData, submissionId: string, rating: Rating) {
+export function applyAiRating(data: GameData, submissionId: string, rating: Rating, comment: string) {
   const submission = data.submissions.find((item) => item.id === submissionId);
-  if (!submission) throw new Error("Submission not found.");
+  if (!submission || submission.rejected || submission.rating != null) return submission ?? null;
   if (![1, 2, 3, 4].includes(rating)) throw new Error("Pick a rating.");
   submission.rating = rating;
+  submission.comment = comment.trim().replace(/\s+/g, " ").slice(0, 200);
   return submission;
 }
 

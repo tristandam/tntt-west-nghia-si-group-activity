@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RATING_LABELS, type Rating } from "@/lib/types";
+import { type Rating } from "@/lib/types";
 
 export function photoUrl(path: string | null | undefined) {
   return path ? `/api/media?path=${encodeURIComponent(path)}` : "";
@@ -41,32 +41,6 @@ export function Stars({ rating }: { rating: Rating | null }) {
         </span>
       ))}
     </span>
-  );
-}
-
-export function RatingButtons({
-  current,
-  onPick,
-}: {
-  current: Rating | null;
-  onPick: (rating: Rating) => void;
-}) {
-  return (
-    <div className="grid gap-2">
-      {([1, 2, 3, 4] as Rating[]).map((rating) => (
-        <button
-          key={rating}
-          type="button"
-          onClick={() => onPick(rating)}
-          className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left ${
-            current === rating ? "border-[#f0c56e] bg-[#4a3b22]" : "border-white/10 bg-black/20"
-          }`}
-        >
-          <span>{RATING_LABELS[rating]}</span>
-          <Stars rating={rating} />
-        </button>
-      ))}
-    </div>
   );
 }
 

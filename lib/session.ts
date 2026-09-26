@@ -39,9 +39,7 @@ export const DEFAULT_ADMIN_PASSWORD = "admin";
 export function staffRoleForPassword(password: string): StaffRole | null {
   const admin =
     process.env.ADMIN_PASSWORD || (process.env.NODE_ENV === "production" ? "" : DEFAULT_ADMIN_PASSWORD);
-  const rater = process.env.RATER_PASSWORD || (process.env.NODE_ENV === "production" ? "" : "rate-dev");
   if (matches(password, admin)) return "admin";
-  if (matches(password, rater)) return "rater";
   return null;
 }
 

@@ -10,10 +10,10 @@ import {
   updatePlayer,
   wipePhotos,
 } from "@/lib/actions";
-import { rateSubmission, rejectSubmission } from "@/lib/game";
+import { rejectSubmission } from "@/lib/game";
 import { clearCookie, fail, json, setStaffCookie, staffRoleForPassword, staffSession } from "@/lib/http";
 import { savePhoto } from "@/lib/photos";
-import { adminView, isRating, rateView } from "@/lib/present";
+import { adminView } from "@/lib/present";
 import { readGame, updateGame } from "@/lib/store";
 import type { Stage } from "@/lib/types";
 
@@ -22,8 +22,8 @@ export async function GET() {
   if (!role) return json({ role: null });
   const data = await readGame();
   const now = Date.now();
-  if (role === "rater") return json({ role, ...rateView(data, now) });
-  return json({ role, ...adminView(data, now), ratingDesk: rateView(data, now) });
+  if (role === "rater") return json({ role });
+  return json({ role, ...adminView(data, now), aiReady: Boolean(process.env.GEMINI_API_KEY) });
 }
 
 export async function POST(request: Request) {
@@ -52,17 +52,11 @@ export async function POST(request: Request) {
     const role = await staffSession();
     if (!role) return json({ error: "Sign in required." }, 401);
 
-    if (body.action === "rate") {
-      if (!isRating(body.rating)) throw new Error("Pick a rating.");
-      const rating = body.rating;
-      await updateGame((data) => rateSubmission(data, String(body.submissionId), rating));
-      return json({ ok: true });
-    }
     if (body.action === "reject") {
       await updateGame((data) => rejectSubmission(data, String(body.submissionId)));
       return json({ ok: true });
     }
-    if (role !== "admin") return json({ error: "That password can only rate and reject." }, 403);
+    if (role !== "admin") return json({ error: "Admin only." }, 403);
 
     if (body.action === "addPlayer") {
       const id = await addPlayer(body);

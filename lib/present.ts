@@ -9,7 +9,7 @@ import {
   roundRank,
 } from "./game";
 import { displayName } from "./names";
-import type { GameData, Player, Rating } from "./types";
+import type { GameData, Player } from "./types";
 
 function members(data: GameData, playerIds: string[]) {
   return playerIds.map((id) => {
@@ -40,6 +40,7 @@ export function presentSubmission(data: GameData, submissionId: string) {
     rejected: submission.rejected,
     rating: submission.rating,
     label: ratingLabel(submission.rating),
+    comment: submission.comment ?? null,
     pointsEach: submission.pointsEach,
     place: roundRank(data, submission),
     members: members(data, group?.playerIds ?? []),
@@ -130,22 +131,3 @@ export function adminView(data: GameData, now: number) {
   };
 }
 
-export function rateView(data: GameData, now: number) {
-  const round = currentRound(data, now);
-  const cards = [...data.submissions]
-    .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
-    .map((submission) => presentSubmission(data, submission.id))
-    .filter((item) => item != null);
-  return {
-    stage: data.settings.stage,
-    roundNumber: round?.number ?? 0,
-    roundOpen: round ? isRoundOpen(round, now) : false,
-    secondsLeft: round && isRoundOpen(round, now) ? Math.max(0, Math.ceil((Date.parse(round.endsAt) - now) / 1000)) : 0,
-    unrated: cards.filter((card) => !card.rejected && card.rating == null && card.roundNumber === (round?.number ?? 0)),
-    cards,
-  };
-}
-
-export function isRating(value: unknown): value is Rating {
-  return value === 1 || value === 2 || value === 3 || value === 4;
-}

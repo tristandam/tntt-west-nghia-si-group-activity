@@ -13,6 +13,7 @@ type Submission = {
   rejected: boolean;
   rating: 1 | 2 | 3 | 4 | null;
   label: string | null;
+  comment: string | null;
   pointsEach: number;
   place: number | null;
 };
@@ -284,8 +285,9 @@ export function PlayerApp() {
               <p className="text-sm text-[#cbbba4]">{latest.rejected ? "Rejected · 0 pts" : `${latest.pointsEach} pts each`}</p>
               <p className="text-2xl font-semibold">“{latest.phrase}”</p>
               <p className="mt-1">
-                <Stars rating={latest.rating} /> {latest.label ?? "Waiting for a rating"}
+                <Stars rating={latest.rating} /> {latest.label ?? "Rating in a moment"}
               </p>
+              {latest.comment ? <p className="mt-1 text-[#cbbba4]">{latest.comment}</p> : null}
               {latest.rejected ? <p className="mt-2 text-[#ffb4a8]">A leader rejected this. Submit another before the round ends.</p> : null}
             </Card>
           ) : null}

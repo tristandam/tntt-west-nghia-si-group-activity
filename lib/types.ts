@@ -50,6 +50,7 @@ export type Submission = {
   submittedAt: string;
   rejected: boolean;
   rating: Rating | null;
+  comment: string | null;
   pointsEach: number;
 };
 

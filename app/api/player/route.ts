@@ -3,6 +3,7 @@ import { fail, json, playerSession, setPlayerCookie, clearCookie } from "@/lib/h
 import { playerView } from "@/lib/present";
 import { savePhoto } from "@/lib/photos";
 import { claimPlayer, releaseOwnClaim, setAvatar } from "@/lib/actions";
+import { scheduleRating } from "@/lib/schedule-rating";
 import { readGame, updateGame } from "@/lib/store";
 
 export async function GET() {
@@ -47,12 +48,12 @@ export async function PUT(request: Request) {
     if (kind === "submission") {
       const phrase = String(form.get("phrase") ?? "");
       const stored = await savePhoto("submissions", crypto.randomUUID(), file);
-      await updateGame((data) => {
+      const submission = await updateGame((data) => {
         const round = liveRound(data, Date.now());
         if (!round) throw new Error("This round is closed.");
         const group = groupForPlayer(data, round.id, me.id);
         if (!group) throw new Error("You are not in a group this round.");
-        addSubmission(data, {
+        return addSubmission(data, {
           round,
           group,
           playerId: me.id,
@@ -61,6 +62,7 @@ export async function PUT(request: Request) {
           now: Date.now(),
         });
       });
+      scheduleRating(submission.id);
       return json({ ok: true });
     }
     return json({ error: "Unknown upload." }, 400);
