@@ -1,4 +1,5 @@
 import { closeExpiredRound, startRound } from "./game";
+import { selfSignup } from "./join";
 import { deleteAllPhotos } from "./photos";
 import { newToken } from "./session";
 import { updateGame } from "./store";
@@ -28,6 +29,18 @@ export async function releaseOwnClaim(playerId: string) {
     found.claimToken = null;
     found.checkedIn = false;
   });
+}
+
+export async function joinAsPlayer(input: Record<string, unknown>) {
+  const token = newToken();
+  const player = await updateGame((data) =>
+    selfSignup(data, {
+      firstName: cleanName(input.firstName),
+      lastName: cleanName(input.lastName),
+      token,
+    }),
+  );
+  return { player, token };
 }
 
 export async function addPlayer(input: Record<string, unknown>) {

@@ -2,7 +2,7 @@ import { addSubmission, groupForPlayer, liveRound } from "@/lib/game";
 import { fail, json, playerSession, setPlayerCookie, clearCookie } from "@/lib/http";
 import { playerView } from "@/lib/present";
 import { savePhoto } from "@/lib/photos";
-import { claimPlayer, releaseOwnClaim, setAvatar } from "@/lib/actions";
+import { claimPlayer, joinAsPlayer, releaseOwnClaim, setAvatar } from "@/lib/actions";
 import { scheduleRating } from "@/lib/schedule-rating";
 import { readGame, updateGame } from "@/lib/store";
 
@@ -14,9 +14,18 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as { action?: string; playerId?: string };
+    const body = (await request.json()) as {
+      action?: string;
+      playerId?: string;
+      firstName?: string;
+      lastName?: string;
+    };
     if (body.action === "claim") {
       const { player, token } = await claimPlayer(String(body.playerId ?? ""));
+      return setPlayerCookie(json({ id: player.id }), player.id, token);
+    }
+    if (body.action === "join") {
+      const { player, token } = await joinAsPlayer(body);
       return setPlayerCookie(json({ id: player.id }), player.id, token);
     }
     const me = await playerSession();

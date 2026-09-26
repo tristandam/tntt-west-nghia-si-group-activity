@@ -58,6 +58,8 @@ async function post(body: unknown) {
 export function PlayerApp() {
   const { data, error, reload } = usePoll<State>("/api/player", empty);
   const [query, setQuery] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [busy, setBusy] = useState("");
   const [phrase, setPhrase] = useState("");
   const [photoName, setPhotoName] = useState("");
@@ -132,8 +134,44 @@ export function PlayerApp() {
                 <span className="text-sm text-[#6d5430]">{person.claimed ? "Taken" : "This is me"}</span>
               </button>
             ))}
-            {data.roster.length === 0 ? <p className="text-[#6d5430]">Names will show up once a leader adds them.</p> : null}
           </div>
+          {data.stage === "prep" ? (
+            <form
+              className="mt-4 grid gap-2 border-t border-[#e4c56a] pt-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void run("join", () => post({ action: "join", firstName, lastName }));
+              }}
+            >
+              <p className="text-sm text-[#6d5430]">Do not see your name? Add it. This phone stays signed in as you.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  value={firstName}
+                  onChange={(event) => setFirstName(event.target.value)}
+                  placeholder="First name"
+                  maxLength={40}
+                  required
+                  className="w-full rounded-2xl border border-[#e4c56a] bg-[#fffdf4] px-4 py-3 text-[#3f2a1c] placeholder:text-[#a18455]"
+                />
+                <input
+                  value={lastName}
+                  onChange={(event) => setLastName(event.target.value)}
+                  placeholder="Last name"
+                  maxLength={40}
+                  required
+                  className="w-full rounded-2xl border border-[#e4c56a] bg-[#fffdf4] px-4 py-3 text-[#3f2a1c] placeholder:text-[#a18455]"
+                />
+              </div>
+              <button
+                disabled={busy === "join"}
+                className="rounded-2xl bg-[#3f2a1c] px-4 py-3 font-semibold text-[#fff6d2] disabled:opacity-40"
+              >
+                Add my name
+              </button>
+            </form>
+          ) : (
+            <p className="mt-4 text-sm text-[#6d5430]">Ask a leader to add you.</p>
+          )}
         </Card>
       ) : (
         <div className="grid gap-4">

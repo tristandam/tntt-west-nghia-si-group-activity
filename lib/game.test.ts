@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { applyAiRating, assignGroups, pointsForPlace, rejectSubmission, startRound } from "./game";
 import { parseRating } from "./ai";
+import { selfSignup } from "./join";
 import { displayName } from "./names";
 import { emptyGame, type Player } from "./types";
 
@@ -138,4 +139,28 @@ test("blank duplicate names stay distinct", () => {
   assert.equal(displayName(players[0], players), "Jaden Nguyen · 1");
   assert.equal(displayName(players[1], players), "Jaden Nguyen · 2");
   assert.equal(displayName(players[2], players), "Jaden Nguyen · An");
+});
+
+test("a player can add their own name during prep and claims a free match", () => {
+  const data = emptyGame();
+  data.players = [
+    player({ id: "leader", firstName: "Chi", lastName: "Lê", isLeader: true, claimToken: null, checkedIn: false }),
+    player({ id: "taken", firstName: "Mai", lastName: "Tran", claimToken: "busy", checkedIn: true }),
+  ];
+
+  const claimed = selfSignup(data, { firstName: "chi", lastName: "Le", token: "phone" });
+  assert.equal(claimed.id, "leader");
+  assert.equal(claimed.isLeader, true);
+  assert.equal(claimed.checkedIn, true);
+  assert.equal(data.players.length, 2);
+
+  const added = selfSignup(data, { firstName: "Mai", lastName: "Tran", token: "other", now: "9" });
+  assert.notEqual(added.id, "taken");
+  assert.equal(added.isLeader, false);
+  assert.equal(added.claimToken, "other");
+  assert.equal(added.checkedIn, true);
+  assert.equal(data.players.length, 3);
+
+  data.settings.stage = "active";
+  assert.throws(() => selfSignup(data, { firstName: "Bo", lastName: "Le", token: "late" }), /Ask a leader/);
 });
