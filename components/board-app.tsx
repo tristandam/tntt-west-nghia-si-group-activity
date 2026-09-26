@@ -16,12 +16,13 @@ type Selfie = {
   comment: string | null;
   pointsEach: number;
   place: number | null;
+  revealed: boolean;
   members: { id: string; name: string }[];
 };
-type State = { scores: Score[]; selfies: Selfie[]; stage: string };
+type State = { scores: Score[]; selfies: Selfie[]; stage: string; roundOpen: boolean };
 
 export function BoardApp() {
-  const { data, error } = usePoll<State>("/api/board", { scores: [], selfies: [], stage: "prep" });
+  const { data, error } = usePoll<State>("/api/board", { scores: [], selfies: [], stage: "prep", roundOpen: false });
   return (
     <Shell
       title={data.stage === "ended" ? "Final scores" : "Live board"}
@@ -35,6 +36,7 @@ export function BoardApp() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <h2 className="text-lg font-semibold">Points</h2>
+          {data.roundOpen ? <p className="mt-1 text-sm text-[#cbbba4]">Scores for this round show when time is up.</p> : null}
           <div className="mt-3 grid gap-2">
             {data.scores.map((row) => (
               <div key={row.id} className="flex items-center gap-3">
@@ -44,7 +46,7 @@ export function BoardApp() {
                 <span className="rounded-full bg-black/30 px-3 py-1 text-[#d7b6ff]">{row.points}</span>
               </div>
             ))}
-            {data.scores.length === 0 ? <p className="text-[#cbbba4]">Scores show up after the first submission.</p> : null}
+            {data.scores.length === 0 ? <p className="text-[#cbbba4]">Scores show up when a round ends.</p> : null}
           </div>
         </Card>
         <div className="grid gap-3">
@@ -57,13 +59,19 @@ export function BoardApp() {
               ) : null}
               <p className="text-xs uppercase tracking-wide text-[#cbbba4]">
                 Round {selfie.roundNumber} · Group {selfie.groupNumber}
-                {selfie.place ? ` · #${selfie.place}` : ""} · {selfie.rejected ? "0" : selfie.pointsEach} pts
+                {selfie.revealed ? `${selfie.place ? ` · #${selfie.place}` : ""} · ${selfie.rejected ? "0" : selfie.pointsEach} pts` : ""}
               </p>
               <p className="text-xl font-semibold">“{selfie.phrase}”</p>
-              <p>
-                <Stars rating={selfie.rating} /> {selfie.label ?? "Rating in a moment"}
-              </p>
-              {selfie.comment ? <p className="mt-1 text-[#cbbba4]">{selfie.comment}</p> : null}
+              {selfie.revealed ? (
+                <>
+                  <p>
+                    <Stars rating={selfie.rating} /> {selfie.label ?? "Rating in a moment"}
+                  </p>
+                  {selfie.comment ? <p className="mt-1 text-[#cbbba4]">{selfie.comment}</p> : null}
+                </>
+              ) : (
+                <p className="text-[#cbbba4]">Scores and comments show when the round ends.</p>
+              )}
               <p className="mt-1 text-sm text-[#cbbba4]">{selfie.members.map((member) => member.name).join(", ")}</p>
             </Card>
           ))}

@@ -13,8 +13,14 @@ export function pointsForPlace(place: number) {
   return [10, 8, 6, 4, 2][place - 1] ?? 1;
 }
 
+export const SUBMISSION_GRACE_MS = 20_000;
+
 export function isRoundOpen(round: Round, now: number) {
   return round.status === "active" && Date.parse(round.endsAt) > now;
+}
+
+export function canSubmitToRound(round: Round, now: number) {
+  return Date.parse(round.endsAt) + SUBMISSION_GRACE_MS > now;
 }
 
 export function currentRound(data: GameData, now: number) {
@@ -61,6 +67,17 @@ export function assignGroups(ids: string[], size: number) {
     groups[groups.length - 1].push(...leftover);
   }
   return groups;
+}
+
+export function extendRound(data: GameData, now: number, extraSec = 30) {
+  if (data.settings.stage !== "active") throw new Error("Switch the game to Active before extending a round.");
+  const round = data.rounds[data.rounds.length - 1];
+  if (!round || round.status !== "active") throw new Error("No round is running.");
+  const ends = Date.parse(round.endsAt);
+  if (now >= ends + SUBMISSION_GRACE_MS) throw new Error("This round is already closed.");
+  const base = Math.max(ends, now);
+  round.endsAt = new Date(base + extraSec * 1000).toISOString();
+  return round;
 }
 
 export function closeExpiredRound(data: GameData, now: number) {
@@ -149,7 +166,7 @@ export function addSubmission(
   },
 ) {
   if (data.settings.stage !== "active") throw new Error("The game is not accepting submissions.");
-  if (!isRoundOpen(input.round, input.now)) throw new Error("This round is closed.");
+  if (!canSubmitToRound(input.round, input.now)) throw new Error("This round is closed.");
   if (!input.group.playerIds.includes(input.playerId)) {
     throw new Error("You are not in this group.");
   }
@@ -195,9 +212,10 @@ export function applyAiRating(data: GameData, submissionId: string, rating: Rati
   return submission;
 }
 
-export function playerPoints(data: GameData, playerId: string) {
+export function playerPoints(data: GameData, playerId: string, skipRoundId: string | null = null) {
   let total = 0;
   for (const group of data.groups) {
+    if (skipRoundId && group.roundId === skipRoundId) continue;
     if (!group.playerIds.includes(playerId)) continue;
     const submission = activeSubmission(data, group.id);
     total += submission?.pointsEach ?? 0;
@@ -205,12 +223,12 @@ export function playerPoints(data: GameData, playerId: string) {
   return total;
 }
 
-export function leaderboard(data: GameData) {
+export function leaderboard(data: GameData, skipRoundId: string | null = null) {
   const rows = data.players
     .filter((player) => !player.archived)
     .map((player) => ({
       player,
-      points: playerPoints(data, player.id),
+      points: playerPoints(data, player.id, skipRoundId),
     }))
     .filter((row) => row.points > 0 || data.groups.some((group) => group.playerIds.includes(row.player.id)))
     .sort(

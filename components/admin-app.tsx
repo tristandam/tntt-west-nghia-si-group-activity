@@ -216,6 +216,14 @@ export function AdminApp() {
           >
             {data.round?.open ? `Round ${data.round.number} · ${data.round.secondsLeft}s` : "Start round"}
           </button>
+          {data.round?.open ? (
+            <button
+              className="rounded-2xl bg-white/10 px-4 py-3 font-semibold"
+              onClick={() => void send({ action: "extendRound" }).catch((err) => setNotice(err.message))}
+            >
+              Add 30 seconds
+            </button>
+          ) : null}
         </Card>
 
         {data.round ? (

@@ -1,4 +1,4 @@
-import { addSubmission, groupForPlayer, liveRound } from "@/lib/game";
+import { addSubmission, canSubmitToRound, groupForPlayer } from "@/lib/game";
 import { fail, json, playerSession, setPlayerCookie, clearCookie } from "@/lib/http";
 import { playerView } from "@/lib/present";
 import { savePhoto } from "@/lib/photos";
@@ -56,10 +56,14 @@ export async function PUT(request: Request) {
     }
     if (kind === "submission") {
       const phrase = String(form.get("phrase") ?? "");
+      const roundId = String(form.get("roundId") ?? "");
       const stored = await savePhoto("submissions", crypto.randomUUID(), file);
       const submission = await updateGame((data) => {
-        const round = liveRound(data, Date.now());
-        if (!round) throw new Error("This round is closed.");
+        const now = Date.now();
+        const round = roundId
+          ? data.rounds.find((item) => item.id === roundId)
+          : data.rounds[data.rounds.length - 1];
+        if (!round || !canSubmitToRound(round, now)) throw new Error("This round is closed.");
         const group = groupForPlayer(data, round.id, me.id);
         if (!group) throw new Error("You are not in a group this round.");
         return addSubmission(data, {
@@ -68,7 +72,7 @@ export async function PUT(request: Request) {
           playerId: me.id,
           phrase,
           photoPath: stored,
-          now: Date.now(),
+          now,
         });
       });
       scheduleRating(submission.id);

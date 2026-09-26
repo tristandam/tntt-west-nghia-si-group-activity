@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fold } from "@/lib/names";
 import { ACTIVITY_TITLE, Card, Face, Shell, Stars, usePoll } from "./ui";
 
@@ -16,6 +16,7 @@ type Submission = {
   comment: string | null;
   pointsEach: number;
   place: number | null;
+  revealed: boolean;
 };
 type State = {
   stage: "prep" | "active" | "ended";
@@ -23,6 +24,7 @@ type State = {
   roster: { id: string; name: string; avatarPath: string | null; claimed: boolean; isLeader: boolean; checkedIn: boolean }[];
   checkedIn: number;
   round: {
+    id: string;
     number: number;
     open: boolean;
     endsAt: string;
@@ -63,7 +65,10 @@ export function PlayerApp() {
   const [busy, setBusy] = useState("");
   const [phrase, setPhrase] = useState("");
   const [photoName, setPhotoName] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [notice, setNotice] = useState("");
+  const autoFor = useRef<string | null>(null);
+  const seenRound = useRef<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const roundEndsAt = data.round?.open ? data.round.endsAt : null;
 
@@ -96,7 +101,65 @@ export function PlayerApp() {
   }
 
   const latest = data.submissions[data.submissions.length - 1];
-  const canSubmit = Boolean(data.round?.open && data.round.group && (!latest || latest.rejected));
+  const needsAnswer = Boolean(data.round?.group && (!latest || latest.rejected));
+  const canSubmit = Boolean(data.round?.open && needsAnswer);
+
+  async function sendSubmission(roundId: string, text: string, file: File, quietDuplicate = false) {
+    const form = new FormData();
+    form.set("kind", "submission");
+    form.set("roundId", roundId);
+    form.set("phrase", text);
+    form.set("photo", file);
+    const response = await fetch("/api/player", { method: "PUT", body: form });
+    const body = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      if (quietDuplicate && body.error?.includes("already submitted")) return;
+      throw new Error(body.error || "Upload failed.");
+    }
+    setPhrase("");
+    setPhotoName("");
+    setPhotoFile(null);
+  }
+
+  const runRef = useRef(run);
+  const sendRef = useRef(sendSubmission);
+  runRef.current = run;
+  sendRef.current = sendSubmission;
+
+  useEffect(() => {
+    const id = data.round?.id ?? null;
+    if (seenRound.current && id && seenRound.current !== id) {
+      setPhrase("");
+      setPhotoName("");
+      setPhotoFile(null);
+      autoFor.current = null;
+    }
+    if (id) seenRound.current = id;
+  }, [data.round?.id]);
+
+  useEffect(() => {
+    if (data.stage !== "active" || !data.round?.group || !needsAnswer || !photoFile || !phrase.trim()) return;
+    if (data.round.open && secondsLeft > 0) return;
+    if (autoFor.current === data.round.id) return;
+    const roundId = data.round.id;
+    const file = photoFile;
+    const text = phrase;
+    const delay = data.round.open ? 3500 : 0;
+    const timer = window.setTimeout(() => {
+      if (autoFor.current === roundId) return;
+      autoFor.current = roundId;
+      void runRef.current("submit", async () => {
+        try {
+          await sendRef.current(roundId, text, file, true);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "";
+          if (!message.includes("closed")) autoFor.current = null;
+          throw err;
+        }
+      });
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [data.stage, data.round, needsAnswer, photoFile, phrase, secondsLeft]);
 
   return (
     <Shell
@@ -260,15 +323,9 @@ export function PlayerApp() {
                   className="mt-4 grid gap-3"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    const form = new FormData(event.currentTarget);
-                    void run("submit", async () => {
-                      form.set("kind", "submission");
-                      const response = await fetch("/api/player", { method: "PUT", body: form });
-                      const body = (await response.json()) as { error?: string };
-                      if (!response.ok) throw new Error(body.error || "Upload failed.");
-                      setPhrase("");
-                      setPhotoName("");
-                    });
+                    const roundId = data.round?.id;
+                    if (!photoFile || !roundId) return;
+                    void run("submit", () => sendSubmission(roundId, phrase, photoFile));
                   }}
                 >
                   <input
@@ -289,7 +346,11 @@ export function PlayerApp() {
                       capture="environment"
                       required
                       className="sr-only"
-                      onChange={(event) => setPhotoName(event.target.files?.[0]?.name ?? "")}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        setPhotoFile(file);
+                        setPhotoName(file?.name ?? "");
+                      }}
                     />
                   </label>
                   <button disabled={busy === "submit"} className="rounded-2xl bg-[#d7b6ff] px-4 py-3 font-semibold text-[#1a140c]">
@@ -300,7 +361,13 @@ export function PlayerApp() {
             </Card>
           ) : null}
 
-          {data.stage === "active" && (!data.round || !data.round.open) ? (
+          {busy === "submit" && !data.round?.open ? (
+            <Card>
+              <p className="text-lg font-semibold">Sending what your group already filled in</p>
+            </Card>
+          ) : null}
+
+          {data.stage === "active" && (!data.round || !data.round.open) && busy !== "submit" ? (
             <Card>
               <p className="text-lg font-semibold">Hold tight</p>
               <p className="text-[#cbbba4]">The next round has not started. Keep this page open.</p>
@@ -320,13 +387,21 @@ export function PlayerApp() {
 
           {latest ? (
             <Card>
-              <p className="text-sm text-[#cbbba4]">{latest.rejected ? "Rejected · 0 pts" : `${latest.pointsEach} pts each`}</p>
               <p className="text-2xl font-semibold">“{latest.phrase}”</p>
-              <p className="mt-1">
-                <Stars rating={latest.rating} /> {latest.label ?? "Rating in a moment"}
-              </p>
-              {latest.comment ? <p className="mt-1 text-[#cbbba4]">{latest.comment}</p> : null}
-              {latest.rejected ? <p className="mt-2 text-[#ffb4a8]">A leader rejected this. Submit another before the round ends.</p> : null}
+              {latest.revealed ? (
+                <>
+                  <p className="mt-1 text-sm text-[#cbbba4]">{latest.rejected ? "Rejected · 0 pts" : `${latest.pointsEach} pts each`}</p>
+                  <p className="mt-1">
+                    <Stars rating={latest.rating} /> {latest.label ?? "Rating in a moment"}
+                  </p>
+                  {latest.comment ? <p className="mt-1 text-[#cbbba4]">{latest.comment}</p> : null}
+                  {latest.rejected ? <p className="mt-2 text-[#ffb4a8]">A leader rejected this. Submit another before the round ends.</p> : null}
+                </>
+              ) : latest.rejected ? (
+                <p className="mt-2 text-[#ffb4a8]">A leader rejected this. Submit another before the round ends.</p>
+              ) : (
+                <p className="mt-1 text-[#cbbba4]">Scores and comments show when the round ends.</p>
+              )}
             </Card>
           ) : null}
 

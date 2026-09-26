@@ -2,6 +2,7 @@ import {
   addPlayer,
   archivePlayer,
   beginRound,
+  extendCurrentRound,
   releasePlayer,
   resetSession,
   saveSettings,
@@ -87,6 +88,10 @@ export async function POST(request: Request) {
     if (body.action === "startRound") {
       const round = await beginRound();
       return json({ number: round.number });
+    }
+    if (body.action === "extendRound") {
+      const round = await extendCurrentRound();
+      return json({ endsAt: round.endsAt });
     }
     if (body.action === "reset") {
       if (body.confirm !== "RESET") throw new Error("Type RESET to clear the session.");

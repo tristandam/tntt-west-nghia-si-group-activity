@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyAiRating, assignGroups, pointsForPlace, rejectSubmission, startRound } from "./game";
+import {
+  addSubmission,
+  applyAiRating,
+  assignGroups,
+  extendRound,
+  pointsForPlace,
+  rejectSubmission,
+  startRound,
+  SUBMISSION_GRACE_MS,
+} from "./game";
 import { parseRating } from "./ai";
 import { selfSignup } from "./join";
 import { displayName } from "./names";
+import { playerView } from "./present";
 import { emptyGame, type Player } from "./types";
 
 function player(partial: Partial<Player> & Pick<Player, "id" | "firstName" | "lastName">): Player {
@@ -163,4 +173,87 @@ test("a player can add their own name during prep and claims a free match", () =
 
   data.settings.stage = "active";
   assert.throws(() => selfSignup(data, { firstName: "Bo", lastName: "Le", token: "late" }), /Ask a leader/);
+});
+
+test("extra time stacks, and a finished answer still scores just after the buzzer", () => {
+  const data = emptyGame();
+  data.settings.stage = "active";
+  data.settings.roundLengthSec = 30;
+  data.settings.nextGroupSize = 2;
+  data.players = [
+    player({ id: "1", firstName: "An", lastName: "Le" }),
+    player({ id: "2", firstName: "Bo", lastName: "Le" }),
+    player({ id: "3", firstName: "Chi", lastName: "Le" }),
+    player({ id: "4", firstName: "Dao", lastName: "Le" }),
+  ];
+  const round = startRound(data, 1_000, () => 0);
+  const ends = Date.parse(round.endsAt);
+  extendRound(data, 5_000);
+  extendRound(data, 5_000);
+  assert.equal(Date.parse(round.endsAt) - ends, 60_000);
+
+  const expired = Date.parse(round.endsAt);
+  extendRound(data, expired + 1_000);
+  assert.equal(Date.parse(round.endsAt), expired + 1_000 + 30_000);
+  assert.throws(() => extendRound(data, Date.parse(round.endsAt) + SUBMISSION_GRACE_MS), /already closed/);
+
+  const first = startRound(data, Date.parse(round.endsAt) + 1_000, () => 0);
+  const buzzer = Date.parse(first.endsAt);
+  const groups = data.groups.filter((item) => item.roundId === first.id);
+  const saved = addSubmission(data, {
+    round: first,
+    group: groups[0],
+    playerId: groups[0].playerIds[0],
+    phrase: "both like pho",
+    photoPath: "a.jpg",
+    now: buzzer + 1_000,
+  });
+  assert.equal(saved.pointsEach, 10);
+  assert.throws(
+    () =>
+      addSubmission(data, {
+        round: first,
+        group: groups[1],
+        playerId: groups[1].playerIds[0],
+        phrase: "too late",
+        photoPath: "b.jpg",
+        now: buzzer + SUBMISSION_GRACE_MS + 1,
+      }),
+    /closed/,
+  );
+});
+
+test("scores and comments stay hidden until the round ends", () => {
+  const data = emptyGame();
+  data.settings.stage = "active";
+  data.settings.roundLengthSec = 30;
+  data.settings.nextGroupSize = 2;
+  data.players = [
+    player({ id: "1", firstName: "An", lastName: "Le" }),
+    player({ id: "2", firstName: "Bo", lastName: "Le" }),
+  ];
+  const round = startRound(data, 1_000, () => 0);
+  const group = data.groups[0];
+  const me = data.players.find((item) => item.id === group.playerIds[0]);
+  if (!me) throw new Error("missing player");
+  const saved = addSubmission(data, {
+    round,
+    group,
+    playerId: me.id,
+    phrase: "both like pho",
+    photoPath: "a.jpg",
+    now: 2_000,
+  });
+  applyAiRating(data, saved.id, 4, "A specific shared detail.");
+  const during = playerView(data, me, 3_000);
+  assert.equal(during.submissions[0]?.revealed, false);
+  assert.equal(during.submissions[0]?.comment, null);
+  assert.equal(during.submissions[0]?.rating, null);
+  assert.equal(during.submissions[0]?.pointsEach, 0);
+  assert.equal(during.score.points, 0);
+  const after = playerView(data, me, Date.parse(round.endsAt) + 1);
+  assert.equal(after.submissions[0]?.revealed, true);
+  assert.equal(after.submissions[0]?.pointsEach, 10);
+  assert.equal(after.submissions[0]?.comment, "A specific shared detail.");
+  assert.equal(after.score.points, 10);
 });

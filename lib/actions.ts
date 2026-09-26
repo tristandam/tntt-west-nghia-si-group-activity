@@ -1,4 +1,4 @@
-import { closeExpiredRound, startRound } from "./game";
+import { closeExpiredRound, extendRound, startRound } from "./game";
 import { selfSignup } from "./join";
 import { deleteAllPhotos } from "./photos";
 import { newToken } from "./session";
@@ -129,6 +129,10 @@ export async function setStage(stage: Stage) {
 
 export async function beginRound() {
   return updateGame((data) => startRound(data, Date.now(), Math.random));
+}
+
+export async function extendCurrentRound() {
+  return updateGame((data) => extendRound(data, Date.now()));
 }
 
 export async function resetSession() {
