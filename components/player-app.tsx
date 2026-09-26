@@ -165,7 +165,7 @@ export function PlayerApp() {
     <Shell
       title={ACTIVITY_TITLE}
       action={
-        <Link className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/board">
+        <Link className="nav-switch" href="/board">
           Leaderboard
         </Link>
       }

@@ -68,7 +68,7 @@ export function Shell({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/scarf.png" alt="" className="h-28 w-32 shrink-0 object-contain object-top mix-blend-multiply" />
         </div>
-        {action ? <div className="brand-actions mt-3 flex justify-end gap-3">{action}</div> : null}
+        {action ? <div className="brand-actions mt-3">{action}</div> : null}
       </header>
       {children}
     </main>

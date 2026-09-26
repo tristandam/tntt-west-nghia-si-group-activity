@@ -115,7 +115,7 @@ export function AdminApp() {
     <Shell
       title="Admin"
       action={
-        <div className="flex gap-3 text-sm">
+        <div className="flex justify-end gap-3 text-sm">
           <Link href="/board">Board</Link>
           <button className="text-[#cbbba4]" onClick={() => void send({ action: "logout" })}>
             Sign out

@@ -24,14 +24,10 @@ type State = { scores: Score[]; selfies: Selfie[]; stage: string; roundOpen: boo
 export function BoardApp() {
   const { data, error } = usePoll<State>("/api/board", { scores: [], selfies: [], stage: "prep", roundOpen: false });
   return (
-    <Shell
-      title={data.stage === "ended" ? "Final scores" : "Live board"}
-      action={
-        <Link className="rounded-full border border-white/15 px-3 py-2 text-sm" href="/">
-          My phone
-        </Link>
-      }
-    >
+    <Shell title={data.stage === "ended" ? "Final scores" : "Live board"}>
+      <Link className="nav-switch nav-switch-sticky mb-4" href="/">
+        Back to my phone
+      </Link>
       {error ? <p className="mb-3 text-sm font-medium text-[#8a3b2b]">{error}</p> : null}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

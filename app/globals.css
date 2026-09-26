@@ -37,3 +37,23 @@ a {
   color: #4a3422;
   border-color: rgba(74, 52, 34, 0.28);
 }
+
+a.nav-switch,
+.brand-actions a.nav-switch {
+  display: block;
+  width: 100%;
+  border-radius: 1rem;
+  background: #3f2a1c;
+  color: #fff6d2;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 650;
+  padding: 0.95rem 1rem;
+  box-shadow: 0 8px 20px rgba(63, 42, 28, 0.18);
+}
+
+a.nav-switch-sticky {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 20;
+}
