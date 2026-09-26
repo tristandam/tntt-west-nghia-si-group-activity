@@ -2,14 +2,14 @@
 
 Phones join by picking a name. Each round groups the checked-in players, they submit one shared photo and one thing they have in common, and points go to everyone in the group by how early that submission arrived: 10, 8, 6, 4, 2, then 1.
 
-Youth leaders with the rater password use `/rate` to set a label. The stars match the label:
+A cheap model rates each answer a few seconds after it is submitted. The stars match the label, and a one-sentence comment explains it. The rating does not change the points.
 
 1. Heard it before
 2. Playing it safe
 3. Decent find
 4. That's the one
 
-Reject sets that submission to 0. The group can submit again, and the new one is scored by the time it arrives. The rater password cannot start rounds, edit the roster, or delete anything. That stays on `/admin`.
+Reject, on the admin page, sets that submission to 0. The group can submit again, and the new one is scored by the time it arrives.
 
 ## Run it locally
 
@@ -18,7 +18,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. The local admin password is `admin`. Raters use `rate-dev`. Change both in `.env.local` before a real event.
+Open `http://localhost:3000`. The local admin password is `admin`. Change it in `.env.local` before a real event. Add `GEMINI_API_KEY` from [Google AI Studio](https://aistudio.google.com/apikey). The default model is `gemini-3.5-flash-lite`.
 
 ## Deploy on the free tiers
 
@@ -29,11 +29,11 @@ Open `http://localhost:3000`. The local admin password is `admin`. Raters use `r
 
 ```
 ADMIN_PASSWORD
-RATER_PASSWORD
 SESSION_SECRET
 DATA_DRIVER=supabase
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
+GEMINI_API_KEY
 ```
 
 Use the service role key on the server only. Do not expose it to the browser.
