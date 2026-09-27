@@ -4,7 +4,10 @@ import {
   addSubmission,
   applyAiRating,
   assignGroups,
+  adjustPoints,
   extendRound,
+  leaderboard,
+  playerPoints,
   pointsForPlace,
   rejectSubmission,
   startRound,
@@ -221,6 +224,33 @@ test("extra time stacks, and a finished answer still scores just after the buzze
       }),
     /closed/,
   );
+});
+
+test("a manual adjustment adds to the score and a deduct can go below it", () => {
+  const data = emptyGame();
+  data.settings.stage = "active";
+  data.settings.nextGroupSize = 2;
+  data.players = [
+    player({ id: "1", firstName: "An", lastName: "Le" }),
+    player({ id: "2", firstName: "Bo", lastName: "Le" }),
+  ];
+  const round = startRound(data, 1_000, () => 0);
+  const group = data.groups[0];
+  addSubmission(data, {
+    round,
+    group,
+    playerId: group.playerIds[0],
+    phrase: "both like pho",
+    photoPath: "a.jpg",
+    now: 2_000,
+  });
+  adjustPoints(data, group.playerIds[0], 3);
+  assert.equal(playerPoints(data, group.playerIds[0]), 13);
+  adjustPoints(data, group.playerIds[0], -20);
+  assert.equal(playerPoints(data, group.playerIds[0]), -7);
+  assert.equal(leaderboard(data).some((row) => row.points === -7), true);
+  assert.throws(() => adjustPoints(data, group.playerIds[0], 0), /number/);
+  assert.throws(() => adjustPoints(data, group.playerIds[0], 101), /100/);
 });
 
 test("scores and comments stay hidden until the round ends", () => {

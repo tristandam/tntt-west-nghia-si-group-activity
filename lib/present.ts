@@ -3,6 +3,8 @@ import {
   groupForPlayer,
   isRoundOpen,
   leaderboard,
+  playerPoints,
+  pointAdjustment,
   liveRound,
   publicPlayer,
   ratingLabel,
@@ -130,7 +132,11 @@ export function adminView(data: GameData, now: number) {
     },
     roster: data.players
       .filter((player) => !player.archived)
-      .map((player) => publicPlayer(player, data.players)),
+      .map((player) => ({
+        ...publicPlayer(player, data.players),
+        points: playerPoints(data, player.id),
+        adjustment: pointAdjustment(player),
+      })),
     round: round
       ? {
           number: round.number,

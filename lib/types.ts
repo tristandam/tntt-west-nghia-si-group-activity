@@ -13,6 +13,7 @@ export type Player = {
   checkedIn: boolean;
   archived: boolean;
   createdAt: string;
+  adjustment?: number;
 };
 
 export type Settings = {

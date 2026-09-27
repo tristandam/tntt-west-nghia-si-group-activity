@@ -145,6 +145,7 @@ export async function resetSession() {
         avatarPath: null,
         claimToken: null,
         checkedIn: false,
+        adjustment: 0,
       }));
     const next = emptyGame();
     next.settings.roundLengthSec = data.settings.roundLengthSec;

@@ -11,7 +11,7 @@ import {
   updatePlayer,
   wipePhotos,
 } from "@/lib/actions";
-import { rejectSubmission } from "@/lib/game";
+import { adjustPoints, rejectSubmission } from "@/lib/game";
 import { clearCookie, fail, json, setStaffCookie, staffRoleForPassword, staffSession } from "@/lib/http";
 import { savePhoto } from "@/lib/photos";
 import { adminView } from "@/lib/present";
@@ -73,6 +73,10 @@ export async function POST(request: Request) {
     }
     if (body.action === "releasePlayer") {
       await releasePlayer(String(body.playerId));
+      return json({ ok: true });
+    }
+    if (body.action === "adjustPoints") {
+      await updateGame((data) => adjustPoints(data, String(body.playerId), Number(body.delta)));
       return json({ ok: true });
     }
     if (body.action === "settings") {

@@ -212,6 +212,21 @@ export function applyAiRating(data: GameData, submissionId: string, rating: Rati
   return submission;
 }
 
+export function pointAdjustment(player: { adjustment?: number }) {
+  const value = player.adjustment;
+  return typeof value === "number" && Number.isFinite(value) ? Math.trunc(value) : 0;
+}
+
+export function adjustPoints(data: GameData, playerId: string, delta: number) {
+  const amount = Math.trunc(delta);
+  if (!Number.isFinite(amount) || amount === 0) throw new Error("Enter a number of points.");
+  if (Math.abs(amount) > 100) throw new Error("Adjust by 100 points or less at a time.");
+  const player = data.players.find((item) => item.id === playerId && !item.archived);
+  if (!player) throw new Error("Player not found.");
+  player.adjustment = pointAdjustment(player) + amount;
+  return player.adjustment;
+}
+
 export function playerPoints(data: GameData, playerId: string, skipRoundId: string | null = null) {
   let total = 0;
   for (const group of data.groups) {
@@ -220,7 +235,8 @@ export function playerPoints(data: GameData, playerId: string, skipRoundId: stri
     const submission = activeSubmission(data, group.id);
     total += submission?.pointsEach ?? 0;
   }
-  return total;
+  const player = data.players.find((item) => item.id === playerId);
+  return total + (player ? pointAdjustment(player) : 0);
 }
 
 export function leaderboard(data: GameData, skipRoundId: string | null = null) {
@@ -230,7 +246,7 @@ export function leaderboard(data: GameData, skipRoundId: string | null = null) {
       player,
       points: playerPoints(data, player.id, skipRoundId),
     }))
-    .filter((row) => row.points > 0 || data.groups.some((group) => group.playerIds.includes(row.player.id)))
+    .filter((row) => row.points !== 0 || data.groups.some((group) => group.playerIds.includes(row.player.id)))
     .sort(
       (a, b) =>
         b.points - a.points ||

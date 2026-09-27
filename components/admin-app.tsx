@@ -15,6 +15,8 @@ type RosterPerson = {
   avatarPath: string | null;
   claimed: boolean;
   checkedIn: boolean;
+  points: number;
+  adjustment: number;
 };
 type Submission = {
   id: string;
@@ -56,6 +58,7 @@ export function AdminApp() {
   const [form, setForm] = useState(blank);
   const [resetText, setResetText] = useState("");
   const [deleteText, setDeleteText] = useState("");
+  const [adjustBy, setAdjustBy] = useState("1");
 
   async function send(body: unknown) {
     const response = await fetch("/api/staff", {
@@ -313,26 +316,76 @@ export function AdminApp() {
             </label>
             <button className="rounded-2xl bg-white/10 px-4 py-3">Add name</button>
           </form>
-          <div className="mt-4 grid gap-2">
+          <label className="mt-4 grid gap-1 text-sm">
+            Points to add or deduct
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={adjustBy}
+              onChange={(event) => setAdjustBy(event.target.value)}
+              className="rounded-2xl border border-white/10 bg-black/30 px-3 py-3"
+            />
+          </label>
+          <div className="mt-3 grid gap-2">
             {(data.roster ?? []).map((person) => (
-              <div key={person.id} className="flex items-center gap-2 rounded-2xl bg-black/25 px-3 py-2">
-                <Face name={person.name} path={person.avatarPath} />
-                <span className="flex-1">
-                  {person.name}
-                  <span className="ml-2 text-xs text-[#cbbba4]">
-                    {person.isLeader ? "Leader" : "Player"}
-                    {person.checkedIn ? " · in" : ""}
-                    {person.claimed ? " · claimed" : ""}
+              <div key={person.id} className="rounded-2xl bg-black/25 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <Face name={person.name} path={person.avatarPath} />
+                  <span className="flex-1">
+                    {person.name}
+                    <span className="ml-2 text-xs text-[#cbbba4]">
+                      {person.isLeader ? "Leader" : "Player"}
+                      {person.checkedIn ? " · in" : ""}
+                      {person.claimed ? " · claimed" : ""}
+                    </span>
                   </span>
-                </span>
-                {person.claimed ? (
-                  <button className="text-xs text-[#cbbba4]" onClick={() => void send({ action: "releasePlayer", playerId: person.id })}>
-                    Release
+                  <span className="text-sm font-semibold text-[#f0c56e]">
+                    {person.points ?? 0} pts
+                    {person.adjustment ? (
+                      <span className="ml-1 font-normal text-[#cbbba4]">
+                        manual {person.adjustment > 0 ? "+" : ""}
+                        {person.adjustment}
+                      </span>
+                    ) : null}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    className="rounded-full bg-white/10 px-3 py-2 text-sm"
+                    onClick={() => {
+                      const amount = Math.trunc(Number(adjustBy));
+                      if (!Number.isFinite(amount) || amount < 1 || amount > 100) {
+                        setNotice("Use a whole number from 1 to 100.");
+                        return;
+                      }
+                      void send({ action: "adjustPoints", playerId: person.id, delta: amount }).catch((err) => setNotice(err.message));
+                    }}
+                  >
+                    Add
                   </button>
-                ) : null}
-                <button className="text-xs text-[#ffb4a8]" onClick={() => void send({ action: "archivePlayer", playerId: person.id })}>
-                  Remove
-                </button>
+                  <button
+                    className="rounded-full bg-white/10 px-3 py-2 text-sm"
+                    onClick={() => {
+                      const amount = Math.trunc(Number(adjustBy));
+                      if (!Number.isFinite(amount) || amount < 1 || amount > 100) {
+                        setNotice("Use a whole number from 1 to 100.");
+                        return;
+                      }
+                      void send({ action: "adjustPoints", playerId: person.id, delta: -amount }).catch((err) => setNotice(err.message));
+                    }}
+                  >
+                    Deduct
+                  </button>
+                  {person.claimed ? (
+                    <button className="text-xs text-[#cbbba4]" onClick={() => void send({ action: "releasePlayer", playerId: person.id })}>
+                      Release
+                    </button>
+                  ) : null}
+                  <button className="text-xs text-[#ffb4a8]" onClick={() => void send({ action: "archivePlayer", playerId: person.id })}>
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
