@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Rating, Stage } from "@/lib/types";
+import { RATING_LABELS, type Rating, type Stage } from "@/lib/types";
 import { Card, Face, Shell, Stars, photoUrl, usePoll } from "./ui";
 
 type RosterPerson = {
@@ -256,9 +256,23 @@ export function AdminApp() {
                         “{submission.phrase}” · {submission.rejected ? "0" : submission.pointsEach} pts
                       </p>
                       <p className="mt-1">
-                        <Stars rating={submission.rating} /> {submission.label ?? "Rating in a moment"}
+                        <Stars rating={submission.rating} /> {submission.label ?? "No score yet"}
                       </p>
                       {submission.comment ? <p className="mt-1 text-sm text-[#cbbba4]">{submission.comment}</p> : null}
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {([1, 2, 3, 4] as const).map((rating) => (
+                          <button
+                            key={rating}
+                            disabled={submission.rejected}
+                            className={`rounded-2xl px-3 py-2 text-left text-sm disabled:opacity-40 ${submission.rating === rating ? "bg-[#f0c56e] text-[#1a140c]" : "bg-white/10"}`}
+                            onClick={() =>
+                              void send({ action: "rate", submissionId: submission.id, rating }).catch((err) => setNotice(err.message))
+                            }
+                          >
+                            {RATING_LABELS[rating]}
+                          </button>
+                        ))}
+                      </div>
                       <button
                         className="mt-2 text-sm text-[#ffb4a8]"
                         disabled={submission.rejected}

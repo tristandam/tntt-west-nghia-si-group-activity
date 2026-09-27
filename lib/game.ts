@@ -9,8 +9,13 @@ import {
   type Submission,
 } from "./types";
 
-export function pointsForPlace(place: number) {
-  return [10, 8, 6, 4, 2][place - 1] ?? 1;
+export function contentPoints(rating: Rating | null) {
+  if (rating == null) return 0;
+  return { 1: 1, 2: 4, 3: 7, 4: 10 }[rating];
+}
+
+export function speedBonus(place: number) {
+  return [2, 1][place - 1] ?? 0;
 }
 
 export const SUBMISSION_GRACE_MS = 20_000;
@@ -92,7 +97,7 @@ export function recalcRound(data: GameData, roundId: string) {
     .filter((submission) => submission.roundId === roundId && !submission.rejected)
     .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt) || a.id.localeCompare(b.id));
   active.forEach((submission, index) => {
-    submission.pointsEach = pointsForPlace(index + 1);
+    submission.pointsEach = contentPoints(submission.rating) + speedBonus(index + 1);
   });
   for (const submission of data.submissions) {
     if (submission.roundId === roundId && submission.rejected) submission.pointsEach = 0;
@@ -209,6 +214,18 @@ export function applyAiRating(data: GameData, submissionId: string, rating: Rati
   if (![1, 2, 3, 4].includes(rating)) throw new Error("Pick a rating.");
   submission.rating = rating;
   submission.comment = comment.trim().replace(/\s+/g, " ").slice(0, 200);
+  recalcRound(data, submission.roundId);
+  return submission;
+}
+
+export function setManualRating(data: GameData, submissionId: string, rating: Rating) {
+  const submission = data.submissions.find((item) => item.id === submissionId);
+  if (!submission) throw new Error("Submission not found.");
+  if (submission.rejected) throw new Error("A rejected answer stays at 0.");
+  if (![1, 2, 3, 4].includes(rating)) throw new Error("Pick a rating.");
+  submission.rating = rating;
+  submission.comment = "Scored by a leader.";
+  recalcRound(data, submission.roundId);
   return submission;
 }
 

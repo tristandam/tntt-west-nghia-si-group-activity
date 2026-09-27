@@ -11,12 +11,12 @@ import {
   updatePlayer,
   wipePhotos,
 } from "@/lib/actions";
-import { adjustPoints, rejectSubmission } from "@/lib/game";
+import { adjustPoints, rejectSubmission, setManualRating } from "@/lib/game";
 import { clearCookie, fail, json, setStaffCookie, staffRoleForPassword, staffSession } from "@/lib/http";
 import { savePhoto } from "@/lib/photos";
 import { adminView } from "@/lib/present";
 import { readGame, updateGame } from "@/lib/store";
-import type { Stage } from "@/lib/types";
+import type { Rating, Stage } from "@/lib/types";
 
 export async function GET() {
   const role = await staffSession();
@@ -55,6 +55,13 @@ export async function POST(request: Request) {
 
     if (body.action === "reject") {
       await updateGame((data) => rejectSubmission(data, String(body.submissionId)));
+      return json({ ok: true });
+    }
+    if (body.action === "rate") {
+      if (role !== "admin") return json({ error: "Admin only." }, 403);
+      const rating = Number(body.rating);
+      if (rating !== 1 && rating !== 2 && rating !== 3 && rating !== 4) throw new Error("Pick a rating.");
+      await updateGame((data) => setManualRating(data, String(body.submissionId), rating as Rating));
       return json({ ok: true });
     }
     if (role !== "admin") return json({ error: "Admin only." }, 403);

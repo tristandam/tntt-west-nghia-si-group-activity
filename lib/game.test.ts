@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   addSubmission,
+  adjustPoints,
   applyAiRating,
   assignGroups,
-  adjustPoints,
+  contentPoints,
   extendRound,
   leaderboard,
   playerPoints,
-  pointsForPlace,
   rejectSubmission,
+  setManualRating,
+  speedBonus,
   startRound,
   SUBMISSION_GRACE_MS,
 } from "./game";
@@ -32,8 +34,11 @@ function player(partial: Partial<Player> & Pick<Player, "id" | "firstName" | "la
   };
 }
 
-test("points follow submission order and then stay at 1", () => {
-  assert.deepEqual([1, 2, 3, 4, 5, 6].map(pointsForPlace), [10, 8, 6, 4, 2, 1]);
+test("a strong answer outscores a fast weak one", () => {
+  assert.equal(contentPoints(1) + speedBonus(1), 3);
+  assert.equal(contentPoints(4) + speedBonus(2), 11);
+  assert.equal(contentPoints(null) + speedBonus(1), 2);
+  assert.equal(speedBonus(6), 0);
 });
 
 test("a leftover single player joins the previous group", () => {
@@ -105,7 +110,7 @@ test("reject zeros a submission and a new one is scored by its own time", () => 
   );
   rejectSubmission(data, "s1");
   assert.equal(data.submissions[0].pointsEach, 0);
-  assert.equal(data.submissions[1].pointsEach, 10);
+  assert.equal(data.submissions[1].pointsEach, 2);
   data.submissions.push({
     id: "s3",
     roundId: round.id,
@@ -122,7 +127,7 @@ test("reject zeros a submission and a new one is scored by its own time", () => 
   rejectSubmission(data, "s2");
   applyAiRating(data, "s3", 4, "A specific family detail is a real find.");
   assert.equal(data.submissions[1].pointsEach, 0);
-  assert.equal(data.submissions[2].pointsEach, 10);
+  assert.equal(data.submissions[2].pointsEach, 12);
   assert.equal(data.submissions[2].rating, 4);
   assert.equal(data.submissions[2].comment, "A specific family detail is a real find.");
   applyAiRating(data, "s3", 1, "should not replace the first rating");
@@ -211,7 +216,7 @@ test("extra time stacks, and a finished answer still scores just after the buzze
     photoPath: "a.jpg",
     now: buzzer + 1_000,
   });
-  assert.equal(saved.pointsEach, 10);
+  assert.equal(saved.pointsEach, 2);
   assert.throws(
     () =>
       addSubmission(data, {
@@ -245,10 +250,10 @@ test("a manual adjustment adds to the score and a deduct can go below it", () =>
     now: 2_000,
   });
   adjustPoints(data, group.playerIds[0], 3);
-  assert.equal(playerPoints(data, group.playerIds[0]), 13);
+  assert.equal(playerPoints(data, group.playerIds[0]), 5);
   adjustPoints(data, group.playerIds[0], -20);
-  assert.equal(playerPoints(data, group.playerIds[0]), -7);
-  assert.equal(leaderboard(data).some((row) => row.points === -7), true);
+  assert.equal(playerPoints(data, group.playerIds[0]), -15);
+  assert.equal(leaderboard(data).some((row) => row.points === -15), true);
   assert.throws(() => adjustPoints(data, group.playerIds[0], 0), /number/);
   assert.throws(() => adjustPoints(data, group.playerIds[0], 101), /100/);
 });
@@ -283,7 +288,36 @@ test("scores and comments stay hidden until the round ends", () => {
   assert.equal(during.score.points, 0);
   const after = playerView(data, me, Date.parse(round.endsAt) + 1);
   assert.equal(after.submissions[0]?.revealed, true);
-  assert.equal(after.submissions[0]?.pointsEach, 10);
+  assert.equal(after.submissions[0]?.pointsEach, 12);
   assert.equal(after.submissions[0]?.comment, "A specific shared detail.");
-  assert.equal(after.score.points, 10);
+  assert.equal(after.score.points, 12);
+});
+
+test("a leader can set the score when the model did not", () => {
+  const data = emptyGame();
+  data.settings.stage = "active";
+  data.settings.nextGroupSize = 2;
+  data.players = [
+    player({ id: "1", firstName: "An", lastName: "Le" }),
+    player({ id: "2", firstName: "Bo", lastName: "Le" }),
+  ];
+  const round = startRound(data, 1_000, () => 0);
+  const group = data.groups[0];
+  const saved = addSubmission(data, {
+    round,
+    group,
+    playerId: group.playerIds[0],
+    phrase: "both like pho",
+    photoPath: "a.jpg",
+    now: 2_000,
+  });
+  setManualRating(data, saved.id, 3);
+  assert.equal(saved.rating, 3);
+  assert.equal(saved.pointsEach, 9);
+  assert.equal(saved.comment, "Scored by a leader.");
+  applyAiRating(data, saved.id, 1, "should not replace a leader score");
+  assert.equal(saved.rating, 3);
+  setManualRating(data, saved.id, 1);
+  assert.equal(saved.rating, 1);
+  assert.equal(saved.pointsEach, 3);
 });
